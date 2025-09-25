@@ -1,8 +1,10 @@
+""" MAIN """
+
 
 import os
 import json
 import math 
-from functools import partial 
+# from functools import partial 
 
 from PyQt5.QtCore import (
     Qt, QPointF, QRectF, QSize, QObject, pyqtSignal
@@ -16,205 +18,8 @@ from PyQt5.QtWidgets import (
     QGraphicsItemGroup, QVBoxLayout, QHBoxLayout, QComboBox, QSpinBox,
     QSlider, QMessageBox, QInputDialog 
 )
-from PIL import Image 
 
 
-# class ResizableRotatedBoxItem(QGraphicsItem):
-#     """
-#     Rotated bounding box that supports corner resizing, rotation, movement, selection.
-#     """ 
-#     # Corner identifiers
-#     TopLeft, TopRight, BottomLeft, BottomRight = range(4)
-
-#     def __init__(self, w=1.0, h=1.0, angle=0.0, label="", classes=None, parent=None):
-#         super().__init__(parent)
-#         self.w = w
-#         self.h = h
-#         self.angle = angle
-#         self.label = label
-#         self.classes = classes or []
-#         self.setFlags(
-#             QGraphicsItem.ItemIsSelectable
-#             | QGraphicsItem.ItemIsMovable
-#             | QGraphicsItem.ItemSendsGeometryChanges
-#         )
-#         # Resize handles: small squares at corners
-#         self.handle_size = 8.0
-#         self.handles = {}  # map corner → QRectF (in item coords)
-#         self._dragging_handle = None
-
-#         self._rotating = False
-#         self._rotate_start = None
-#         self._angle_start = 0.0
-
-#         self.updateHandlesPos()
-
-#     def boundingRect(self):
-#         pad = self.handle_size
-#         # include handles and a bit extra
-#         return QRectF(-self.w/2 - pad, -self.h/2 - pad,
-#                       self.w + pad * 2, self.h + pad * 2)
-
-#     def paint(self, painter: QPainter, option, widget=None):
-#         painter.save()
-
-#         # Draw main rectangle (rotated via item transform)
-#         rect = QRectF(-self.w/2, -self.h/2, self.w, self.h)
-#         pen = QPen(QColor("red") if self.isSelected() else QColor("green"))
-#         pen.setWidth(2)
-#         painter.setPen(pen)
-#         painter.drawRect(rect)
-
-#         # Draw corner handles
-#         painter.setBrush(QColor(200, 200, 200))
-#         for _, hrect in self.handles.items():
-#             painter.drawRect(hrect)
-
-#         # Draw rotation handle (above top edge center)
-#         # Let's place rotation handle some distance above
-#         offset = QPointF(0, -self.h/2 - 20)
-#         size = self.handle_size
-#         rh = QRectF(offset.x() - size/2, offset.y() - size/2, size, size)
-#         painter.setBrush(QColor(150, 150, 255))
-#         painter.drawRect(rh)
-
-#         # Draw label text near top-left
-#         painter.setPen(QColor("black"))
-#         painter.drawText(rect.topLeft() + QPointF(4, -4), self.label)
-
-#         painter.restore()
-
-#     def updateHandlesPos(self):
-#         """Recompute corner handles in local item coordinates."""
-#         s = self.handle_size
-#         # corners of the box (unrotated) relative to center
-#         halfw = self.w / 2
-#         halfh = self.h / 2
-#         # define handles as small squares around those corners
-#         self.handles = {
-#             ResizableRotatedBoxItem.TopLeft: QRectF(-halfw - s/2, -halfh - s/2, s, s),
-#             ResizableRotatedBoxItem.TopRight: QRectF(halfw - s/2, -halfh - s/2, s, s),
-#             ResizableRotatedBoxItem.BottomLeft: QRectF(-halfw - s/2, halfh - s/2, s, s),
-#             ResizableRotatedBoxItem.BottomRight: QRectF(halfw - s/2, halfh - s/2, s, s),
-#         }
-
-#     def shape(self):
-#         # Accurate shape for hit-testing and selection
-#         path = super().shape()
-#         rect = QRectF(-self.w / 2, -self.h / 2, self.w, self.h)
-#         path.addRect(rect)
-#         return path
-
-#     def itemChange(self, change, value):
-#         if change == QGraphicsItem.ItemPositionChange:
-#             # could clamp to scene bounds if needed
-#             return value
-#         return super().itemChange(change, value)
-
-#     def mousePressEvent(self, event):
-#         pos = event.pos()
-
-#         if event.button() == Qt.RightButton:
-#             # Start rotation on right-click inside the box
-#             self._rotating = True
-#             self._rotate_start = event.scenePos()
-#             self._angle_start = self.angle
-#             event.accept()
-#             return 
-
-#         # Check for resizing handles (left-click only)
-#         if event.button() == Qt.LeftButton:
-#             # Check if clicking on a resize handle
-#             for corner, hrect in self.handles.items():
-#                 if hrect.contains(pos):
-#                     self._dragging_handle = corner
-#                     event.accept()
-#                     return
-
-#             # If inside shape, allow move
-#             if self.contains(pos):
-#                 self.setCursor(Qt.ClosedHandCursor)
-#                 super().mousePressEvent(event)
-#                 return
-
-#         super().mousePressEvent(event)
-
-#     def mouseMoveEvent(self, event):
-#         if self._dragging_handle is not None:
-#             # resizing
-#             # map the movement to local coordinates
-#             inv = QTransform().rotate(-self.angle)
-#             delta = event.pos() - event.lastPos()
-#             dlocal = inv.map(delta) - inv.map(QPointF(0, 0))
-#             dx = dlocal.x()
-#             dy = dlocal.y()
-#             # depending on corner, adjust w,h and position offset
-#             if self._dragging_handle == ResizableRotatedBoxItem.TopLeft:
-#                 self.w -= dx
-#                 self.h -= dy
-#                 self.setPos(self.pos() + QPointF(dx/2, dy/2))
-#             elif self._dragging_handle == ResizableRotatedBoxItem.TopRight:
-#                 self.w += dx
-#                 self.h -= dy
-#                 self.setPos(self.pos() + QPointF(dx/2, dy/2))
-#             elif self._dragging_handle == ResizableRotatedBoxItem.BottomLeft:
-#                 self.w -= dx
-#                 self.h += dy
-#                 self.setPos(self.pos() + QPointF(dx/2, dy/2))
-#             elif self._dragging_handle == ResizableRotatedBoxItem.BottomRight:
-#                 self.w += dx
-#                 self.h += dy
-#                 self.setPos(self.pos() + QPointF(dx/2, dy/2))
-#             # enforce minima
-#             self.w = max(self.w, self.handle_size * 2)
-#             self.h = max(self.h, self.handle_size * 2)
-#             self.updateHandlesPos()
-#             self.update()
-#             return
-
-#         if self._rotating:
-#             center_scene = self.mapToScene(QPointF(0, 0))
-#             v0 = self._rotate_start - center_scene
-#             v1 = event.scenePos() - center_scene
-#             angle0 = math.degrees(math.atan2(v0.y(), v0.x()))
-#             angle1 = math.degrees(math.atan2(v1.y(), v1.x()))
-#             da = angle1 - angle0
-#             self.angle = self._angle_start + da
-#             self.setRotation(self.angle)
-#             return
-
-#         super().mouseMoveEvent(event) 
-
-#     def mouseReleaseEvent(self, event):
-#         self._dragging_handle = None
-#         self._rotating = False
-#         self.setCursor(Qt.ArrowCursor) 
-#         super().mouseReleaseEvent(event)
-
-#     def setLabel(self, label: str):
-#         self.label = label
-#         self.update()
-
-#     def to_dict(self):
-#         # convert to a serializable dict
-#         center = self.pos()
-#         return {
-#             "cx": center.x(),
-#             "cy": center.y(),
-#             "w": self.w,
-#             "h": self.h,
-#             "angle": self.angle,
-#             "label": self.label
-#         }
-
-#     @classmethod
-#     def from_dict(cls, d: dict, classes=None):
-#         obj = cls(w=d["w"], h=d["h"], angle=d.get("angle", 0.0),
-#                   label=d.get("label", ""), classes=classes)
-#         obj.setPos(QPointF(d["cx"], d["cy"]))
-#         obj.setRotation(d.get("angle", 0.0))
-#         obj.updateHandlesPos()
-#         return obj 
 
 class ResizableRotatedBoxItem(QGraphicsItem):
      # Corner identifiers for handles
@@ -463,7 +268,7 @@ class ResizableRotatedBoxItem(QGraphicsItem):
             norm_angle += 360
             
         angle_out = norm_angle 
-        print(angle_out) 
+        # print(angle_out) 
         
         # 2. Iteratively constrain the angle to the (-90, 90] range by swapping W/H.
         # Repeat until the angle is within the target range.
@@ -967,7 +772,7 @@ def main():
     import sys
     app = QApplication(sys.argv)
     win = AnnotatorWindow()
-    win.resize(800, 600)
+    win.resize(800, 800)
     win.show()
     sys.exit(app.exec_())
 
