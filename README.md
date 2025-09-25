@@ -47,6 +47,8 @@ Label files are saved as *json* with following format in the same folder as imag
 *angle*: angle in degrees (-90 to +90)  
 *label*: category (in text)  
 
+### *Leave a :star:*  if you like it  
+
 ### Coming Soon  
 
 1) AI assisted labelling, Auto-labelling  
