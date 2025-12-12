@@ -49,9 +49,5 @@ Label files are saved as *json* with following format in the same folder as imag
 
 ### *Leave a :star:*  if you like it  
 
-### Coming Soon  
-
-1) AI assisted labelling, Auto-labelling  
-2) Data augmentation, curated train and test split  
-3) video labelling  
+_______________ 
 
